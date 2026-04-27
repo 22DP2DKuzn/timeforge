@@ -19,6 +19,11 @@ const I18n = (() => {
             'register.submit': 'Reģistrēties',
             'register.hasAccount': 'Jau ir konts?',
             'register.login': 'Pieteikties',
+            'auth.continueGuest': 'Turpināt kā viesis',
+            'auth.guestMode': 'Viesa režīms',
+            'auth.registerRequired': 'Lai izmantotu šo funkciju, nepieciešama reģistrācija',
+            'auth.registerPrompt': 'Jūs varat apskatīt vietni kā viesis, bet darbībām un saglabāšanai nepieciešams konts.',
+            'auth.signInRegister': 'Pieteikties / Reģistrēties',
 
             // Form fields
             'form.email': 'E-pasts',
@@ -44,6 +49,13 @@ const I18n = (() => {
             'nav.admin': 'Administrācija',
             'nav.profile': 'Profils',
             'nav.logout': 'Iziet',
+
+            // Footer
+            'footer.tagline': 'Plāno. Fokusējies. Sasniedz.',
+            'footer.nav': 'Navigācija',
+            'footer.tools': 'Rīki',
+            'footer.account': 'Konts',
+            'footer.copy': '© 2025 TimeForge. Visas tiesības aizsargātas.',
 
             // Header
             'header.search': 'Meklēt...',
@@ -258,6 +270,11 @@ const I18n = (() => {
             'register.submit': 'Register',
             'register.hasAccount': 'Already have an account?',
             'register.login': 'Sign In',
+            'auth.continueGuest': 'Continue as guest',
+            'auth.guestMode': 'Guest mode',
+            'auth.registerRequired': 'You need to register to use this feature',
+            'auth.registerPrompt': 'You can browse the site as a guest, but actions and saved progress require an account.',
+            'auth.signInRegister': 'Sign In / Register',
 
             'form.email': 'Email',
             'form.password': 'Password',
@@ -281,6 +298,13 @@ const I18n = (() => {
             'nav.admin': 'Administration',
             'nav.profile': 'Profile',
             'nav.logout': 'Logout',
+
+            // Footer
+            'footer.tagline': 'Plan. Focus. Achieve.',
+            'footer.nav': 'Navigation',
+            'footer.tools': 'Tools',
+            'footer.account': 'Account',
+            'footer.copy': '© 2025 TimeForge. All rights reserved.',
 
             'header.search': 'Search...',
 

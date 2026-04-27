@@ -15,23 +15,38 @@ const Calendar = (() => {
         const monthName = Array.isArray(months) ? months[currentDate.getMonth()] : '';
 
         page.innerHTML = `
-            <div class="page-header">
-                <h1>${I18n.t('calendar.title')}</h1>
+            <div class="site-page site-page-calendar">
+                <section class="page-hero">
+                    <div class="page-hero-main">
+                        <span class="page-eyebrow">${I18n.getLang() === 'lv' ? 'Plānošana' : 'Scheduling'}</span>
+                        <h1>${I18n.t('calendar.title')}</h1>
+                        <p>${I18n.getLang() === 'lv'
+                            ? 'Pārskatiet grafiku mēneša, nedēļas vai dienas griezumā un pārkārtojiet darbus vizuāli.'
+                            : 'Review your schedule by month, week, or day and reorganize work visually.'
+                        }</p>
+                    </div>
+                    <div class="page-metrics">
+                        <div class="metric-chip"><strong>${currentView}</strong><span>${I18n.getLang() === 'lv' ? 'skats' : 'view'}</span></div>
+                        <div class="metric-chip"><strong>${monthName}</strong><span>${currentDate.getFullYear()}</span></div>
+                    </div>
+                </section>
+                <section class="section-panel">
+                    <div class="calendar-controls">
+                        <div class="calendar-nav">
+                            <button class="cal-nav-btn" id="cal-prev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+                            <h2 id="cal-title">${monthName} ${currentDate.getFullYear()}</h2>
+                            <button class="cal-nav-btn" id="cal-next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+                            <button class="btn btn-sm btn-secondary" id="cal-today">${I18n.t('calendar.today')}</button>
+                        </div>
+                        <div class="calendar-view-tabs">
+                            <button class="cal-view-btn ${currentView==='month'?'active':''}" data-view="month">${I18n.t('calendar.month')}</button>
+                            <button class="cal-view-btn ${currentView==='week'?'active':''}" data-view="week">${I18n.t('calendar.week')}</button>
+                            <button class="cal-view-btn ${currentView==='day'?'active':''}" data-view="day">${I18n.t('calendar.day')}</button>
+                        </div>
+                    </div>
+                    <div id="calendar-content" class="cal-view-enter"></div>
+                </section>
             </div>
-            <div class="calendar-controls">
-                <div class="calendar-nav">
-                    <button class="cal-nav-btn" id="cal-prev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
-                    <h2 id="cal-title">${monthName} ${currentDate.getFullYear()}</h2>
-                    <button class="cal-nav-btn" id="cal-next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
-                    <button class="btn btn-sm btn-secondary" id="cal-today">${I18n.t('calendar.today')}</button>
-                </div>
-                <div class="calendar-view-tabs">
-                    <button class="cal-view-btn ${currentView==='month'?'active':''}" data-view="month">${I18n.t('calendar.month')}</button>
-                    <button class="cal-view-btn ${currentView==='week'?'active':''}" data-view="week">${I18n.t('calendar.week')}</button>
-                    <button class="cal-view-btn ${currentView==='day'?'active':''}" data-view="day">${I18n.t('calendar.day')}</button>
-                </div>
-            </div>
-            <div id="calendar-content" class="cal-view-enter"></div>
         `;
 
         bindControls();

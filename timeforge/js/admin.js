@@ -72,6 +72,7 @@ const Admin = (() => {
                 <td>
                     <select class="btn btn-sm btn-secondary" data-uid="${u.id}" data-action="role" ${isSelf ? 'disabled' : ''} style="padding:4px 8px;font-size:0.78rem">
                         <option value="user" ${u.role==='user'?'selected':''}>User</option>
+                        <option value="guest" ${u.role==='guest'?'selected':''}>Guest</option>
                         <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
                     </select>
                 </td>

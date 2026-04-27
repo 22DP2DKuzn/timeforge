@@ -1,0 +1,15 @@
+<?php
+// ─────────────────────────────────────────────────────
+//  TimeForge — Local API config
+//  Copy this file to:  api/config.local.php
+//  Then fill in your free Google Gemini key below.
+//
+//  Get a FREE key in 2 minutes (no credit card):
+//    1. Go to https://aistudio.google.com
+//    2. Click "Get API Key" → "Create API key"
+//    3. Copy the key and paste it below
+//
+//  Free tier: 1 500 requests/day, 15 requests/minute
+// ─────────────────────────────────────────────────────
+
+define('GEMINI_API_KEY', 'AIzaSy_YOUR_KEY_HERE');

@@ -29,6 +29,7 @@ const Timer = (() => {
     function renderPage() {
         const user = Store.getCurrentUser();
         if (!user) return;
+        const isGuest = App.isGuestUser(user);
         const page = document.getElementById('timer-page');
         const tasks = Store.getTasks(user.id).filter(t => t.status !== 'completed' && t.status !== 'cancelled');
         const todaySessions = Store.getFocusSessions(user.id).filter(s => s.type === 'work' && s.completed && s.createdAt.startsWith(Utils.toISODate(new Date())));
@@ -38,7 +39,23 @@ const Timer = (() => {
                            state.phase === 'shortBreak' ? I18n.t('timer.shortBreak') : I18n.t('timer.longBreak');
 
         page.innerHTML = `
-            <div class="page-header"><h1>${I18n.t('timer.title')}</h1></div>
+            <div class="site-page site-page-timer">
+            <section class="page-hero">
+                <div class="page-hero-main">
+                    <span class="page-eyebrow">${I18n.getLang() === 'lv' ? 'Fokuss' : 'Focus'}</span>
+                    <h1>${I18n.t('timer.title')}</h1>
+                    <p>${I18n.getLang() === 'lv'
+                        ? 'Izmantojiet strukturētas darba sesijas, lai noturētu ritmu un sasaistītu fokusu ar reāliem uzdevumiem.'
+                        : 'Use structured work sessions to keep momentum and connect focus time to real tasks.'
+                    }</p>
+                </div>
+                <div class="page-metrics">
+                    <div class="metric-chip"><strong>${todaySessions.length}</strong><span>${I18n.getLang() === 'lv' ? 'sesijas šodien' : 'sessions today'}</span></div>
+                    <div class="metric-chip"><strong>${totalMin}</strong><span>${I18n.t('timer.min')}</span></div>
+                    <div class="metric-chip"><strong>${settings.workDuration}</strong><span>${I18n.getLang() === 'lv' ? 'darba cikls' : 'work cycle'}</span></div>
+                </div>
+            </section>
+            <section class="section-panel">
             <div class="timer-layout">
                 <div class="card">
                     <div class="timer-display">
@@ -64,30 +81,30 @@ const Timer = (() => {
                         </div>
                         <div class="timer-controls">
                             ${!state.running ? `
-                                <button class="timer-btn timer-btn-primary" id="timer-start-btn" title="${I18n.t('timer.start')}">
+                                <button class="timer-btn timer-btn-primary" id="timer-start-btn" data-requires-auth="true" title="${I18n.t('timer.start')}">
                                     <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                                 </button>
                             ` : `
-                                <button class="timer-btn timer-btn-secondary" id="timer-stop-btn" title="${I18n.t('timer.stop')}">
+                                <button class="timer-btn timer-btn-secondary" id="timer-stop-btn" data-requires-auth="true" title="${I18n.t('timer.stop')}">
                                     <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
                                 </button>
                                 ${state.paused ? `
-                                    <button class="timer-btn timer-btn-primary" id="timer-resume-btn" title="${I18n.t('timer.resume')}">
+                                    <button class="timer-btn timer-btn-primary" id="timer-resume-btn" data-requires-auth="true" title="${I18n.t('timer.resume')}">
                                         <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                                     </button>
                                 ` : `
-                                    <button class="timer-btn timer-btn-primary" id="timer-pause-btn" title="${I18n.t('timer.pause')}">
+                                    <button class="timer-btn timer-btn-primary" id="timer-pause-btn" data-requires-auth="true" title="${I18n.t('timer.pause')}">
                                         <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
                                     </button>
                                 `}
-                                <button class="timer-btn timer-btn-secondary" id="timer-reset-btn" title="${I18n.t('timer.reset')}">
+                                <button class="timer-btn timer-btn-secondary" id="timer-reset-btn" data-requires-auth="true" title="${I18n.t('timer.reset')}">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                                 </button>
                             `}
                         </div>
                         <div class="timer-task-link" id="timer-task-link">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                            <select id="timer-task-select">
+                            <select id="timer-task-select" data-requires-auth="true">
                                 <option value="">${I18n.t('timer.selectTask')}</option>
                                 ${tasks.map(t => `<option value="${t.id}" ${state.linkedTaskId === t.id ? 'selected' : ''}>${Utils.escapeHtml(t.name)}</option>`).join('')}
                             </select>
@@ -101,34 +118,34 @@ const Timer = (() => {
                         <div class="timer-setting-row">
                             <span class="timer-setting-label">${I18n.t('timer.workDuration')}</span>
                             <div class="timer-setting-control">
-                                <input type="number" id="ts-work" value="${settings.workDuration}" min="1" max="120">
+                                <input type="number" id="ts-work" value="${settings.workDuration}" min="1" max="120" data-requires-auth="true">
                                 <span class="timer-setting-unit">${I18n.t('timer.min')}</span>
                             </div>
                         </div>
                         <div class="timer-setting-row">
                             <span class="timer-setting-label">${I18n.t('timer.shortBreakDuration')}</span>
                             <div class="timer-setting-control">
-                                <input type="number" id="ts-short" value="${settings.shortBreak}" min="1" max="30">
+                                <input type="number" id="ts-short" value="${settings.shortBreak}" min="1" max="30" data-requires-auth="true">
                                 <span class="timer-setting-unit">${I18n.t('timer.min')}</span>
                             </div>
                         </div>
                         <div class="timer-setting-row">
                             <span class="timer-setting-label">${I18n.t('timer.longBreakDuration')}</span>
                             <div class="timer-setting-control">
-                                <input type="number" id="ts-long" value="${settings.longBreak}" min="1" max="60">
+                                <input type="number" id="ts-long" value="${settings.longBreak}" min="1" max="60" data-requires-auth="true">
                                 <span class="timer-setting-unit">${I18n.t('timer.min')}</span>
                             </div>
                         </div>
                         <div class="timer-setting-row">
                             <span class="timer-setting-label">${I18n.t('timer.sessionsBeforeLong')}</span>
                             <div class="timer-setting-control">
-                                <input type="number" id="ts-sessions" value="${settings.sessionsBeforeLong}" min="1" max="10">
+                                <input type="number" id="ts-sessions" value="${settings.sessionsBeforeLong}" min="1" max="10" data-requires-auth="true">
                             </div>
                         </div>
                         <div class="timer-setting-row">
                             <span class="timer-setting-label">${I18n.t('timer.sound')}</span>
                             <label class="switch">
-                                <input type="checkbox" id="ts-sound" ${settings.soundEnabled ? 'checked' : ''}>
+                                <input type="checkbox" id="ts-sound" ${settings.soundEnabled ? 'checked' : ''} data-requires-auth="true">
                                 <span class="switch-slider"></span>
                             </label>
                         </div>
@@ -144,7 +161,15 @@ const Timer = (() => {
                             <span>${totalMin} ${I18n.t('timer.min')}</span>
                         </div>
                     </div>
+                    ${isGuest ? `
+                        <div class="timer-settings" style="margin-top:16px;border:1px dashed var(--border-color)">
+                            <h3>${I18n.t('auth.guestMode')}</h3>
+                            <p>${I18n.t('auth.registerPrompt')}</p>
+                        </div>
+                    ` : ''}
                 </div>
+            </div>
+            </section>
             </div>
         `;
 
@@ -192,6 +217,7 @@ const Timer = (() => {
     }
 
     function startTimer() {
+        if (App.isGuestUser()) return App.requireAccount();
         state.running = true;
         state.paused = false;
         state.phase = 'work';
@@ -203,18 +229,21 @@ const Timer = (() => {
     }
 
     function pauseTimer() {
+        if (App.isGuestUser()) return App.requireAccount();
         state.paused = true;
         clearInterval(interval);
         renderPage();
     }
 
     function resumeTimer() {
+        if (App.isGuestUser()) return App.requireAccount();
         state.paused = false;
         tick();
         renderPage();
     }
 
     function stopTimer() {
+        if (App.isGuestUser()) return App.requireAccount();
         clearInterval(interval);
         // Save incomplete session
         saveSession(false);
@@ -227,6 +256,7 @@ const Timer = (() => {
     }
 
     function resetTimer() {
+        if (App.isGuestUser()) return App.requireAccount();
         clearInterval(interval);
         state.running = false;
         state.paused = false;

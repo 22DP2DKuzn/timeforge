@@ -7,69 +7,144 @@ const Notifications = (() => {
 
     /** Render notifications page */
     function renderPage() {
-        const user = Store.getCurrentUser();
+        const user     = Store.getCurrentUser();
         if (!user) return;
-        const page = document.getElementById('notifications-page');
-        const notifs = Store.getNotifications(user.id);
+        const page     = document.getElementById('notifications-page');
+        const notifs   = Store.getNotifications(user.id);
         const settings = Store.getSettings();
+        const lang     = I18n.getLang();
+        const unread   = notifs.filter(n => !n.read).length;
 
-        let html = `
-            <div class="page-header">
-                <h1>${I18n.t('notifications.title')}</h1>
-                <div class="page-header-actions">
-                    <button class="btn btn-secondary btn-sm" id="mark-all-read-btn">
-                        ${I18n.t('notifications.markAllRead')}
-                    </button>
-                </div>
-            </div>
-            <!-- Settings -->
-            <div class="card" style="margin-bottom:20px;padding:16px">
-                <div class="card-header"><span class="card-title">⚙️ ${I18n.t('notifications.settings')}</span></div>
-                <div style="display:flex;flex-direction:column;gap:12px">
-                    <div style="display:flex;justify-content:space-between;align-items:center">
-                        <span style="font-size:0.85rem;color:var(--text-secondary)">${I18n.t('notifications.reminder24h')}</span>
-                        <label class="switch"><input type="checkbox" id="ns-24h" ${settings.reminder24h ? 'checked' : ''}><span class="switch-slider"></span></label>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center">
-                        <span style="font-size:0.85rem;color:var(--text-secondary)">${I18n.t('notifications.reminder1h')}</span>
-                        <label class="switch"><input type="checkbox" id="ns-1h" ${settings.reminder1h ? 'checked' : ''}><span class="switch-slider"></span></label>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center">
-                        <span style="font-size:0.85rem;color:var(--text-secondary)">${I18n.t('notifications.email')}</span>
-                        <label class="switch"><input type="checkbox" id="ns-email" ${settings.emailNotifications ? 'checked' : ''}><span class="switch-slider"></span></label>
-                    </div>
-                </div>
-            </div>
-            <!-- Notification List -->
-            <div id="notification-list" style="display:flex;flex-direction:column;gap:8px">
-        `;
-
+        let notifListHtml = '';
         if (notifs.length === 0) {
-            html += `<div class="empty-state"><div class="empty-state-icon">🔔</div><h3>${I18n.t('notifications.noNotifications')}</h3></div>`;
+            notifListHtml = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🔔</div>
+                    <h3>${I18n.t('notifications.noNotifications')}</h3>
+                    <p>${lang === 'lv' ? 'Jums nav jaunu paziņojumu' : 'You have no new notifications'}</p>
+                </div>`;
         } else {
             notifs.forEach(n => {
                 const iconBg = n.type === 'achievement' ? 'rgba(251,191,36,0.15)' :
-                               n.type === 'focus' ? 'rgba(86,65,255,0.15)' :
-                               n.type === 'deadline' ? 'rgba(244,63,94,0.15)' : 'rgba(96,165,250,0.15)';
-                html += `
+                               n.type === 'focus'       ? 'rgba(86,65,255,0.15)'  :
+                               n.type === 'deadline'    ? 'rgba(244,63,94,0.15)'  : 'rgba(96,165,250,0.15)';
+                notifListHtml += `
                     <div class="notification-card ${n.read ? '' : 'unread'}" data-notif-id="${n.id}">
                         <div class="notification-icon" style="background:${iconBg}">${n.icon}</div>
                         <div class="notification-body">
                             <div class="notification-title">${Utils.escapeHtml(n.title)}</div>
                             <div class="notification-text">${Utils.escapeHtml(n.message)}</div>
-                            <div class="notification-time">${Utils.timeAgo(n.createdAt)}</div>
+                            <div class="notification-time">🕐 ${Utils.timeAgo(n.createdAt)}</div>
                         </div>
-                    </div>
-                `;
+                        ${!n.read ? '<div class="notif-unread-dot"></div>' : ''}
+                    </div>`;
             });
         }
 
-        html += '</div>';
-        page.innerHTML = html;
+        page.innerHTML = `
+            <div class="site-page site-page-notifications">
+            <section class="page-hero">
+                <div class="page-hero-main">
+                    <span class="page-eyebrow">${lang === 'lv' ? 'Aktivitāte' : 'Activity'}</span>
+                    <h1>${I18n.t('notifications.title')}</h1>
+                    <p>${lang === 'lv' ? 'Saņemiet atgādinājumus, sistēmas ziņas un sasniegumu paziņojumus vienotā ieejā.' : 'Track reminders, system messages, and achievement updates in one unified inbox.'}</p>
+                </div>
+                <div class="page-hero-actions">
+                    <button class="btn btn-secondary btn-sm" id="mark-all-read-hero" data-requires-auth="true">
+                        ✓ ${I18n.t('notifications.markAllRead')}
+                    </button>
+                </div>
+                <div class="page-metrics">
+                    <div class="metric-chip"><strong>${notifs.length}</strong><span>${lang === 'lv' ? 'kopā' : 'total'}</span></div>
+                    <div class="metric-chip"><strong>${unread}</strong><span>${lang === 'lv' ? 'nelasīti' : 'unread'}</span></div>
+                    <div class="metric-chip"><strong>${notifs.length - unread}</strong><span>${lang === 'lv' ? 'izskatīti' : 'reviewed'}</span></div>
+                </div>
+            </section>
+            <!-- ═══ NOTIFICATIONS HEADER ═══ -->
+            <div class="notif-page-header">
+                <div class="notif-header-left">
+                    <h1>${I18n.t('notifications.title')}</h1>
+                    <p class="notif-header-sub">${lang === 'lv' ? 'Jūsu aktivitātes un atgādinājumi' : 'Your activity and reminders'}</p>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="mark-all-read-btn" data-requires-auth="true">
+                    ✓ ${I18n.t('notifications.markAllRead')}
+                </button>
+            </div>
+
+            ${unread > 0 ? `
+            <div class="notif-unread-banner">
+                <span class="notif-banner-dot"></span>
+                <span>${lang === 'lv' ? `Jums ir <strong>${unread}</strong> nelasīts paziņojums` : `You have <strong>${unread}</strong> unread notification${unread !== 1 ? 's' : ''}`}</span>
+            </div>` : ''}
+
+            <!-- ═══ TWO-PANEL LAYOUT ═══ -->
+            <div class="notif-layout">
+
+                <!-- Settings sidebar -->
+                <aside class="notif-sidebar">
+                    <div class="notif-sidebar-title">
+                        <span>⚙️</span>
+                        ${I18n.t('notifications.settings')}
+                    </div>
+                    <div class="notif-settings-list">
+                        <div class="notif-setting-row">
+                            <div class="notif-setting-info">
+                                <div class="notif-setting-name">⏰ ${I18n.t('notifications.reminder24h')}</div>
+                                <div class="notif-setting-desc">${lang === 'lv' ? '24h pirms termiņa' : '24h before deadline'}</div>
+                            </div>
+                            <label class="switch" data-requires-auth="true"><input type="checkbox" id="ns-24h" ${settings.reminder24h ? 'checked' : ''} data-requires-auth="true"><span class="switch-slider"></span></label>
+                        </div>
+                        <div class="notif-setting-row">
+                            <div class="notif-setting-info">
+                                <div class="notif-setting-name">🔔 ${I18n.t('notifications.reminder1h')}</div>
+                                <div class="notif-setting-desc">${lang === 'lv' ? '1h pirms termiņa' : '1h before deadline'}</div>
+                            </div>
+                            <label class="switch" data-requires-auth="true"><input type="checkbox" id="ns-1h" ${settings.reminder1h ? 'checked' : ''} data-requires-auth="true"><span class="switch-slider"></span></label>
+                        </div>
+                        <div class="notif-setting-row">
+                            <div class="notif-setting-info">
+                                <div class="notif-setting-name">📧 ${I18n.t('notifications.email')}</div>
+                                <div class="notif-setting-desc">${lang === 'lv' ? 'E-pasta paziņojumi' : 'Email notifications'}</div>
+                            </div>
+                            <label class="switch" data-requires-auth="true"><input type="checkbox" id="ns-email" ${settings.emailNotifications ? 'checked' : ''} data-requires-auth="true"><span class="switch-slider"></span></label>
+                        </div>
+                    </div>
+
+                    <!-- Quick stats -->
+                    <div class="notif-sidebar-stats">
+                        <div class="notif-sidebar-stat">
+                            <div class="notif-sidebar-stat-val">${notifs.length}</div>
+                            <div class="notif-sidebar-stat-label">${lang === 'lv' ? 'Kopā' : 'Total'}</div>
+                        </div>
+                        <div class="notif-sidebar-stat">
+                            <div class="notif-sidebar-stat-val" style="color:var(--accent-primary)">${unread}</div>
+                            <div class="notif-sidebar-stat-label">${lang === 'lv' ? 'Nelasīti' : 'Unread'}</div>
+                        </div>
+                        <div class="notif-sidebar-stat">
+                            <div class="notif-sidebar-stat-val" style="color:var(--success)">${notifs.length - unread}</div>
+                            <div class="notif-sidebar-stat-label">${lang === 'lv' ? 'Lasīti' : 'Read'}</div>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Notifications list -->
+                <div class="notif-main">
+                    <div class="notif-list-header">
+                        <span class="notif-list-count">${notifs.length} ${lang === 'lv' ? 'paziņojumi' : 'notifications'}</span>
+                    </div>
+                    <div id="notification-list" class="notif-list">
+                        ${notifListHtml}
+                    </div>
+                </div>
+            </div>
+            </div>
+        `;
+
         bindEvents();
     }
 
     function bindEvents() {
+        document.getElementById('mark-all-read-hero')?.addEventListener('click', () => document.getElementById('mark-all-read-btn')?.click());
         document.getElementById('mark-all-read-btn')?.addEventListener('click', () => {
             const user = Store.getCurrentUser();
             if (!user) return;

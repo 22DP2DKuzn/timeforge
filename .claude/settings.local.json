@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(printenv)",
+      "Bash(curl -s -X POST 'http://localhost/TimeForge%20\\(2\\)/timeforge/api/ai/pet_chat.php' -H 'Content-Type: application/json' -d '{\"messages\":[{\"role\":\"user\",\"text\":\"привет\"}],\"pet\":{\"name\":\"Nova\",\"type\":\"fox\",\"style\":\"quick\"},\"context\":{\"page\":\"dashboard\",\"language\":\"ru\"}}')",
+      "Bash(curl -s -X POST 'http://localhost/TimeForge%20\\(2\\)/timeforge/api/ai/pet_chat.php' -H 'Content-Type: application/json' -d '{\"messages\":[{\"role\":\"user\",\"text\":\"Sveiks! Ko tu proti?\"}],\"pet\":{\"name\":\"Nova\",\"type\":\"fox\",\"style\":\"quick, witty, practical\"},\"context\":{\"page\":\"dashboard\",\"language\":\"lv\"}}')",
+      "Bash(curl -s \"https://generativelanguage.googleapis.com/v1beta/models?key=AIzaSyC2TTZHZZ91QdRmO87XBpwz1Zs_du5iOsU\")",
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(m['name']\\) for m in data.get\\('models',[]\\)]\")",
+      "Bash(curl -s -X POST 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyC2TTZHZZ91QdRmO87XBpwz1Zs_du5iOsU' -H 'Content-Type: application/json' -d '{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"Say hi in one sentence\"}]}]}')",
+      "Bash(curl -s -X POST 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=AIzaSyC2TTZHZZ91QdRmO87XBpwz1Zs_du5iOsU' -H 'Content-Type: application/json' -d '{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"Say hi in one sentence\"}]}]}')",
+      "Bash(curl -s -X POST 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=AIzaSyC2TTZHZZ91QdRmO87XBpwz1Zs_du5iOsU' -H 'Content-Type: application/json' -d '{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"Hi\"}]}]}')",
+      "Bash(curl -s -X POST 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=AIzaSyC2TTZHZZ91QdRmO87XBpwz1Zs_du5iOsU' -H 'Content-Type: application/json' -d '{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"Hi\"}]}]}')",
+      "Bash(curl -s -X POST 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=AIzaSyC2TTZHZZ91QdRmO87XBpwz1Zs_du5iOsU' -H 'Content-Type: application/json' -d '{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"Hi, say hello in one sentence\"}]}]}')",
+      "Bash(curl -s -X POST 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=AIzaSyC2TTZHZZ91QdRmO87XBpwz1Zs_du5iOsU' -H 'Content-Type: application/json' -d '{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"Say hello in one sentence\"}]}],\"generationConfig\":{\"maxOutputTokens\":100,\"thinkingConfig\":{\"thinkingBudget\":0}}}')",
+      "Bash(python3 -c ' *)",
+      "Bash(py --version)",
+      "Bash(py -c ' *)",
+      "Bash(git checkout *)"
+    ]
+  }
+}

@@ -12,43 +12,119 @@ const Analytics = (() => {
         const user = Store.getCurrentUser();
         if (!user) return;
         const page = document.getElementById('analytics-page');
+        const lang = I18n.getLang();
+
+        const allTasks    = Store.getTasks(user.id);
+        const allSessions = Store.getFocusSessions(user.id).filter(s => s.completed && s.type === 'work');
+        const completed   = allTasks.filter(t => t.status === 'completed').length;
+        const totalFocusH = Math.round(allSessions.reduce((s, f) => s + f.duration, 0) / 3600 * 10) / 10;
+        const rate        = allTasks.length > 0 ? Math.round((completed / allTasks.length) * 100) : 0;
+        const bestStreak  = user.streak || 0;
 
         page.innerHTML = `
-            <div class="page-header">
-                <h1>${I18n.t('analytics.title')}</h1>
-                <div class="page-header-actions">
-                    <select id="analytics-period" class="btn btn-secondary" style="padding:8px 14px;font-size:0.85rem">
-                        <option value="week" ${period==='week'?'selected':''}>${I18n.t('analytics.lastWeek')}</option>
-                        <option value="month" ${period==='month'?'selected':''}>${I18n.t('analytics.lastMonth')}</option>
-                        <option value="year" ${period==='year'?'selected':''}>${I18n.t('analytics.lastYear')}</option>
-                    </select>
+            <div class="site-page site-page-analytics">
+            <section class="page-hero">
+                <div class="page-hero-main">
+                    <span class="page-eyebrow">${lang === 'lv' ? 'Analītika' : 'Insights'}</span>
+                    <h1>${I18n.t('analytics.title')}</h1>
+                    <p>${lang === 'lv' ? 'Pārskatāmi rādītāji par fokusa laiku, izpildi un darba sadalījumu.' : 'Clear performance reporting for focus time, completion, and work distribution.'}</p>
+                </div>
+                <div class="page-metrics">
+                    <div class="metric-chip"><strong>${completed}</strong><span>${lang === 'lv' ? 'pabeigti' : 'completed'}</span></div>
+                    <div class="metric-chip"><strong>${totalFocusH}h</strong><span>${lang === 'lv' ? 'fokuss' : 'focus'}</span></div>
+                    <div class="metric-chip"><strong>${rate}%</strong><span>${lang === 'lv' ? 'izpilde' : 'rate'}</span></div>
+                    <div class="metric-chip"><strong>${bestStreak}</strong><span>${lang === 'lv' ? 'sērija' : 'streak'}</span></div>
+                </div>
+            </section>
+            <!-- ═══ ANALYTICS HEADER ═══ -->
+            <div class="analytics-header">
+                <div class="analytics-header-left">
+                    <h1>${I18n.t('analytics.title')}</h1>
+                    <p class="analytics-subtitle">${lang === 'lv' ? 'Jūsu produktivitātes dati' : 'Your productivity insights'}</p>
+                </div>
+                <div class="analytics-period-wrap">
+                    <label class="analytics-period-label">${lang === 'lv' ? 'Periods:' : 'Period:'}</label>
+                    <div class="analytics-period-tabs">
+                        <button class="analytics-period-btn ${period==='week'?'active':''}" data-period="week">${I18n.t('analytics.lastWeek')}</button>
+                        <button class="analytics-period-btn ${period==='month'?'active':''}" data-period="month">${I18n.t('analytics.lastMonth')}</button>
+                        <button class="analytics-period-btn ${period==='year'?'active':''}" data-period="year">${I18n.t('analytics.lastYear')}</button>
+                    </div>
                 </div>
             </div>
-            <div class="two-column">
-                <div class="chart-container">
-                    <div class="card-header"><span class="card-title">📊 ${I18n.t('analytics.completedTasks')}</span></div>
-                    <canvas id="chart-tasks" height="260"></canvas>
+
+            <!-- ═══ MINI STATS ROW ═══ -->
+            <div class="analytics-kpi-row">
+                <div class="analytics-kpi">
+                    <div class="analytics-kpi-icon" style="background:rgba(86,65,255,0.12);color:#7c6dff">✅</div>
+                    <div class="analytics-kpi-body">
+                        <div class="analytics-kpi-val">${completed}</div>
+                        <div class="analytics-kpi-label">${lang === 'lv' ? 'Pabeigti uzdevumi' : 'Tasks Completed'}</div>
+                    </div>
                 </div>
-                <div class="chart-container">
-                    <div class="card-header"><span class="card-title">⏱️ ${I18n.t('analytics.focusSessions')}</span></div>
-                    <canvas id="chart-focus" height="260"></canvas>
+                <div class="analytics-kpi">
+                    <div class="analytics-kpi-icon" style="background:rgba(255,108,210,0.12);color:#FF6CD2">⏱️</div>
+                    <div class="analytics-kpi-body">
+                        <div class="analytics-kpi-val">${totalFocusH}h</div>
+                        <div class="analytics-kpi-label">${lang === 'lv' ? 'Fokusa laiks' : 'Focus Time'}</div>
+                    </div>
+                </div>
+                <div class="analytics-kpi">
+                    <div class="analytics-kpi-icon" style="background:rgba(74,222,128,0.12);color:#4ade80">📈</div>
+                    <div class="analytics-kpi-body">
+                        <div class="analytics-kpi-val">${rate}%</div>
+                        <div class="analytics-kpi-label">${lang === 'lv' ? 'Izpildes līmenis' : 'Completion Rate'}</div>
+                    </div>
+                </div>
+                <div class="analytics-kpi">
+                    <div class="analytics-kpi-icon" style="background:rgba(251,146,60,0.12);color:#fb923c">🔥</div>
+                    <div class="analytics-kpi-body">
+                        <div class="analytics-kpi-val">${bestStreak}</div>
+                        <div class="analytics-kpi-label">${lang === 'lv' ? 'Dienu sērija' : 'Day Streak'}</div>
+                    </div>
                 </div>
             </div>
-            <div class="two-column" style="margin-top:20px">
-                <div class="chart-container">
-                    <div class="card-header"><span class="card-title">📁 ${I18n.t('analytics.timeByProject')}</span></div>
-                    <canvas id="chart-projects" height="260"></canvas>
+
+            <!-- ═══ CHARTS GRID ═══ -->
+            <div class="analytics-charts-grid">
+                <div class="analytics-chart-card analytics-chart-wide">
+                    <div class="analytics-chart-title">
+                        <span class="analytics-chart-icon">📊</span>
+                        ${I18n.t('analytics.completedTasks')}
+                    </div>
+                    <canvas id="chart-tasks" height="240"></canvas>
                 </div>
-                <div class="chart-container">
-                    <div class="card-header"><span class="card-title">🏷️ ${I18n.t('analytics.timeByCategory')}</span></div>
-                    <canvas id="chart-categories" height="260"></canvas>
+                <div class="analytics-chart-card analytics-chart-wide">
+                    <div class="analytics-chart-title">
+                        <span class="analytics-chart-icon">⏱️</span>
+                        ${I18n.t('analytics.focusSessions')}
+                    </div>
+                    <canvas id="chart-focus" height="240"></canvas>
                 </div>
+                <div class="analytics-chart-card">
+                    <div class="analytics-chart-title">
+                        <span class="analytics-chart-icon">📁</span>
+                        ${I18n.t('analytics.timeByProject')}
+                    </div>
+                    <canvas id="chart-projects" height="240"></canvas>
+                </div>
+                <div class="analytics-chart-card">
+                    <div class="analytics-chart-title">
+                        <span class="analytics-chart-icon">🏷️</span>
+                        ${I18n.t('analytics.timeByCategory')}
+                    </div>
+                    <canvas id="chart-categories" height="240"></canvas>
+                </div>
+            </div>
             </div>
         `;
 
-        document.getElementById('analytics-period').addEventListener('change', e => {
-            period = e.target.value;
-            drawCharts(user);
+        page.querySelectorAll('.analytics-period-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                page.querySelectorAll('.analytics-period-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                period = btn.dataset.period;
+                drawCharts(user);
+            });
         });
 
         setTimeout(() => drawCharts(user), 50);

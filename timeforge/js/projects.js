@@ -13,17 +13,48 @@ const Projects = (() => {
         if (!user) return;
         const page = document.getElementById('projects-page');
         const projects = Store.getProjects(user.id);
+        const allTasks = Store.getTasks(user.id);
+        const activeProjects = projects.filter(p => p.status === 'active').length;
+        const completedProjects = projects.filter(p => p.status === 'completed').length;
+        const avgProgress = projects.length > 0
+            ? Math.round(projects.reduce((sum, p) => {
+                const tasks = allTasks.filter(t => t.projectId === p.id);
+                const completed = tasks.filter(t => t.status === 'completed').length;
+                return sum + (tasks.length > 0 ? (completed / tasks.length) * 100 : 0);
+            }, 0) / projects.length)
+            : 0;
 
         let html = `
-            <div class="page-header">
-                <h1>${I18n.t('projects.title')}</h1>
-                <div class="page-header-actions">
-                    <button class="btn btn-primary ripple" id="new-project-btn">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        ${I18n.t('projects.new')}
-                    </button>
-                </div>
-            </div>
+            <div class="site-page site-page-projects">
+                <section class="page-hero">
+                    <div class="page-hero-main">
+                        <span class="page-eyebrow">${I18n.getLang() === 'lv' ? 'Portfelis' : 'Portfolio'}</span>
+                        <h1>${I18n.t('projects.title')}</h1>
+                        <p>${I18n.getLang() === 'lv'
+                            ? 'Sakārtojiet iniciatīvas vienā vietā un pārskatāmi sekojiet progresam, termiņiem un statusiem.'
+                            : 'Organize initiatives in one place and track progress, timelines, and delivery status with clarity.'
+                        }</p>
+                    </div>
+                    <div class="page-hero-actions">
+                        <button class="btn btn-primary ripple" id="new-project-btn" data-requires-auth="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            ${I18n.t('projects.new')}
+                        </button>
+                    </div>
+                    <div class="page-metrics">
+                        <div class="metric-chip"><strong>${projects.length}</strong><span>${I18n.getLang() === 'lv' ? 'kopā' : 'total'}</span></div>
+                        <div class="metric-chip"><strong>${activeProjects}</strong><span>${I18n.getLang() === 'lv' ? 'aktīvi' : 'active'}</span></div>
+                        <div class="metric-chip"><strong>${completedProjects}</strong><span>${I18n.getLang() === 'lv' ? 'pabeigti' : 'completed'}</span></div>
+                        <div class="metric-chip"><strong>${avgProgress}%</strong><span>${I18n.getLang() === 'lv' ? 'vidējais progress' : 'avg. progress'}</span></div>
+                    </div>
+                </section>
+                <section class="section-panel">
+                    <div class="section-panel-header">
+                        <div>
+                            <h2>${I18n.getLang() === 'lv' ? 'Projektu pārskats' : 'Project Overview'}</h2>
+                            <p>${I18n.getLang() === 'lv' ? 'Atveriet projektu, lai skatītu saistītos uzdevumus.' : 'Open a project to view its related tasks.'}</p>
+                        </div>
+                    </div>
         `;
 
         if (projects.length === 0) {
@@ -37,7 +68,7 @@ const Projects = (() => {
         } else {
             html += '<div class="content-grid">';
             projects.forEach(p => {
-                const tasks = Store.getTasks(user.id).filter(t => t.projectId === p.id);
+                const tasks = allTasks.filter(t => t.projectId === p.id);
                 const completed = tasks.filter(t => t.status === 'completed').length;
                 const pct = tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
                 const statusKey = p.status === 'active' ? 'projects.active' :
@@ -62,8 +93,8 @@ const Projects = (() => {
                         <div class="project-card-footer">
                             <span class="task-tag ${statusClass}">${I18n.t(statusKey)}</span>
                             <div style="display:flex;gap:6px">
-                                <button class="btn btn-ghost btn-sm edit-project-btn" data-id="${p.id}" title="${I18n.t('projects.edit')}">✏️</button>
-                                <button class="btn btn-ghost btn-sm delete-project-btn" data-id="${p.id}" title="${I18n.t('projects.delete')}">🗑️</button>
+                                <button class="btn btn-ghost btn-sm edit-project-btn" data-id="${p.id}" data-requires-auth="true" title="${I18n.t('projects.edit')}">✏️</button>
+                                <button class="btn btn-ghost btn-sm delete-project-btn" data-id="${p.id}" data-requires-auth="true" title="${I18n.t('projects.delete')}">🗑️</button>
                             </div>
                         </div>
                     </div>
@@ -71,6 +102,11 @@ const Projects = (() => {
             });
             html += '</div>';
         }
+
+        html += `
+                </section>
+            </div>
+        `;
 
         page.innerHTML = html;
         bindEvents();
@@ -101,18 +137,14 @@ const Projects = (() => {
         document.querySelectorAll('.project-card').forEach(card => {
             card.addEventListener('click', () => {
                 const pid = card.dataset.projectId;
-                // Navigate to tasks page filtered by project
-                App.navigateTo('tasks');
-                setTimeout(() => {
-                    const filter = document.getElementById('filter-project');
-                    if (filter) { filter.value = pid; filter.dispatchEvent(new Event('change')); }
-                }, 100);
+                window.location.href = `tasks.html?project=${encodeURIComponent(pid)}`;
             });
         });
     }
 
     /** Open create/edit modal */
     function openModal(editId) {
+        if (App.isGuestUser()) return App.requireAccount();
         const project = editId ? Store.getProjectById(editId) : null;
         const isEdit = !!project;
         const title = isEdit ? I18n.t('projects.edit') : I18n.t('projects.new');
@@ -228,6 +260,7 @@ const Projects = (() => {
 
     /** Confirm delete */
     function confirmDelete(id) {
+        if (App.isGuestUser()) return App.requireAccount();
         const html = `
             <div class="modal-header">
                 <h2>${I18n.t('common.warning')}</h2>

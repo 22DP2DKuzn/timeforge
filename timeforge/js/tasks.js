@@ -12,19 +12,44 @@ const Tasks = (() => {
         if (!user) return;
         const page = document.getElementById('tasks-page');
         const projects = Store.getProjects(user.id);
+        const tasks = Store.getTasks(user.id);
+        const activeTasks = tasks.filter(t => t.status === 'inProgress').length;
+        const plannedTasks = tasks.filter(t => t.status === 'planned').length;
+        const today = Utils.toISODate(new Date());
+        const dueToday = tasks.filter(t => t.date === today && t.status !== 'completed' && t.status !== 'cancelled').length;
 
         let html = `
-            <div class="page-header">
-                <h1>${I18n.t('tasks.title')}</h1>
-                <div class="page-header-actions">
-                    <button class="btn btn-primary ripple" id="new-task-btn">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        ${I18n.t('tasks.new')}
-                    </button>
-                </div>
-            </div>
-            <!-- Filters -->
-            <div class="filter-bar">
+            <div class="site-page site-page-tasks">
+                <section class="page-hero">
+                    <div class="page-hero-main">
+                        <span class="page-eyebrow">${I18n.getLang() === 'lv' ? 'Darba plūsma' : 'Workflow'}</span>
+                        <h1>${I18n.t('tasks.title')}</h1>
+                        <p>${I18n.getLang() === 'lv'
+                            ? 'Plānojiet prioritātes, filtrējiet darbu pēc konteksta un uzturiet vienu skaidru uzdevumu sarakstu.'
+                            : 'Plan priorities, filter work by context, and keep one clear task list for execution.'
+                        }</p>
+                    </div>
+                    <div class="page-hero-actions">
+                        <button class="btn btn-primary ripple" id="new-task-btn" data-requires-auth="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            ${I18n.t('tasks.new')}
+                        </button>
+                    </div>
+                    <div class="page-metrics">
+                        <div class="metric-chip"><strong>${tasks.length}</strong><span>${I18n.getLang() === 'lv' ? 'kopā' : 'total'}</span></div>
+                        <div class="metric-chip"><strong>${activeTasks}</strong><span>${I18n.getLang() === 'lv' ? 'aktīvā darbā' : 'in progress'}</span></div>
+                        <div class="metric-chip"><strong>${plannedTasks}</strong><span>${I18n.getLang() === 'lv' ? 'plānoti' : 'planned'}</span></div>
+                        <div class="metric-chip"><strong>${dueToday}</strong><span>${I18n.getLang() === 'lv' ? 'šodien' : 'due today'}</span></div>
+                    </div>
+                </section>
+                <section class="section-panel">
+                    <div class="section-panel-header">
+                        <div>
+                            <h2>${I18n.getLang() === 'lv' ? 'Uzdevumu pārvaldība' : 'Task Management'}</h2>
+                            <p>${I18n.getLang() === 'lv' ? 'Filtrējiet pēc prioritātes, statusa, projekta un datuma.' : 'Filter by priority, status, project, and date.'}</p>
+                        </div>
+                    </div>
+                    <div class="filter-bar">
                 <select id="filter-priority">
                     <option value="all">${I18n.t('tasks.filterPriority')}</option>
                     <option value="low">${I18n.t('tasks.low')}</option>
@@ -53,8 +78,10 @@ const Tasks = (() => {
                 </select>
                 <input type="date" id="filter-date-from" title="${I18n.t('tasks.filterDateFrom')}">
                 <input type="date" id="filter-date-to" title="${I18n.t('tasks.filterDateTo')}">
+                    </div>
+                    <div id="tasks-list"></div>
+                </section>
             </div>
-            <div id="tasks-list"></div>
         `;
 
         page.innerHTML = html;
@@ -114,10 +141,10 @@ const Tasks = (() => {
                          task.status === 'completed' ? 'tasks.completed' : 'tasks.cancelled';
 
         return `
-            <div class="task-card ${isComplete ? 'completed' : ''}" data-priority="${task.priority}" data-task-id="${task.id}">
+            <div class="task-card ${isComplete ? 'completed' : ''}" data-priority="${task.priority}" data-task-id="${task.id}" data-requires-auth="true">
                 <div class="task-card-header">
                     <span class="task-card-title">${task.type === 'meeting' ? '📅 ' : ''}${Utils.escapeHtml(task.name)}</span>
-                    <div class="task-card-checkbox ${isComplete ? 'checked' : ''}" data-task-id="${task.id}" title="${I18n.t('tasks.markComplete')}"></div>
+                    <div class="task-card-checkbox ${isComplete ? 'checked' : ''}" data-task-id="${task.id}" data-requires-auth="true" title="${I18n.t('tasks.markComplete')}"></div>
                 </div>
                 ${task.description ? `<div class="task-card-desc">${Utils.escapeHtml(task.description)}</div>` : ''}
                 <div class="task-card-meta">
@@ -147,6 +174,17 @@ const Tasks = (() => {
         });
         document.getElementById('filter-date-from')?.addEventListener('change', e => { filters.dateFrom = e.target.value; renderTaskList(); });
         document.getElementById('filter-date-to')?.addEventListener('change', e => { filters.dateTo = e.target.value; renderTaskList(); });
+
+        const params = new URLSearchParams(window.location.search);
+        const projectId = params.get('project');
+        if (projectId) {
+            const projectFilter = document.getElementById('filter-project');
+            if (projectFilter && projectFilter.value !== projectId) {
+                projectFilter.value = projectId;
+                filters.project = projectId;
+                renderTaskList();
+            }
+        }
     }
 
     function bindTaskCardEvents() {
@@ -185,6 +223,7 @@ const Tasks = (() => {
 
     /** Open create/edit task modal */
     function openModal(editId, presetDate) {
+        if (App.isGuestUser()) return App.requireAccount();
         const user = Store.getCurrentUser();
         const task = editId ? Store.getTaskById(editId) : null;
         const isEdit = !!task;
@@ -339,6 +378,7 @@ const Tasks = (() => {
     }
 
     function confirmDelete(id) {
+        if (App.isGuestUser()) return App.requireAccount();
         const html = `
             <div class="modal-header"><h2>${I18n.t('common.warning')}</h2>
                 <button class="modal-close" id="modal-close-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>

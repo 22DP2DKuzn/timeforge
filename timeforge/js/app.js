@@ -1,85 +1,83 @@
 /* ============================================
-   TimeForge — App Controller
-   Navigation, init, modals, theme, sidebar, search
+   TimeForge — App Controller (MPA)
+   Per-page init, modals, theme, sidebar, search
    ============================================ */
 
 const App = (() => {
-    let currentPage = 'dashboard';
-
-    /** Initialize the application */
-    function init() {
-        // Seed default quotes
-        Store.seedQuotes();
-
-        // Init i18n
-        I18n.updateDOM();
-
-        // Init auth UI
-        Auth.init();
-
-        // Check existing session
-        const user = Auth.checkSession();
-        if (user) {
-            showMainApp(user);
-        }
-
-        // Global event listeners
-        bindGlobalEvents();
+    function isGuestUser(user = Store.getCurrentUser()) {
+        return !!user && (user.role === 'guest' || user.isGuest === true);
     }
 
-    /** Show main app after login */
-    function showMainApp(user) {
-        document.getElementById('auth-container').classList.add('hidden');
-        document.getElementById('main-app').classList.remove('hidden');
+    function requireAccount() {
+        Toast.error(I18n.t('common.error'), I18n.t('auth.registerRequired'));
+    }
+
+    async function init() {
+        const savedTheme = localStorage.getItem('tf_theme');
+        if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+
+        I18n.updateDOM();
+
+        const pageName = document.body.dataset.page;
+        if (!pageName) return;
+
+        const user = await Auth.checkSession();
+        const activeUser = user || Auth.getGuestUser();
+
+        if (!user) {
+            Store.clearAppData();
+            Store.setCurrentUser(activeUser);
+        } else {
+            Store.setCurrentUser(activeUser);
+            await Store.hydrate();
+        }
+
+        Layout.inject();
+        I18n.updateDOM();
 
         updateUserUI();
         Achievements.updateLevelUI();
         Notifications.updateBadge();
 
-        // Show admin nav if admin
         document.querySelectorAll('.admin-only').forEach(el => {
-            el.style.display = user.role === 'admin' ? 'flex' : 'none';
+            el.style.display = activeUser.role === 'admin' ? 'flex' : 'none';
         });
 
-        // Check deadline notifications
-        Notifications.checkDeadlines();
-        // Check achievements on login
-        Achievements.checkAll(user);
-
-        // Render current page
-        navigateTo('dashboard');
-
-        // Periodic deadline check every 5 min
-        setInterval(() => Notifications.checkDeadlines(), 300000);
-    }
-
-    /** Show auth pages (after logout) */
-    function showAuth() {
-        document.getElementById('main-app').classList.add('hidden');
-        document.getElementById('auth-container').classList.remove('hidden');
-        document.getElementById('login-page').classList.add('active');
-        document.getElementById('register-page').classList.remove('active');
-        Quotes.stopRotation();
-    }
-
-    /** Navigate to a page */
-    function navigateTo(pageName) {
-        currentPage = pageName;
-
-        // Update nav active state
         document.querySelectorAll('.nav-item[data-page]').forEach(item => {
             item.classList.toggle('active', item.dataset.page === pageName);
         });
 
-        // Hide all pages, show target
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        const targetPage = document.getElementById(pageName + '-page');
-        if (targetPage) {
-            targetPage.classList.add('active');
+        if (!isGuestUser(activeUser)) {
+            Notifications.checkDeadlines();
+            Achievements.checkAll(activeUser);
         }
 
-        // Render page content
-        switch(pageName) {
+        renderPage(pageName);
+        applyGuestMode(activeUser);
+
+        // Reveal app, hide loader
+        const loader = document.getElementById('app-loader');
+        const mainApp = document.getElementById('main-app');
+        if (loader) loader.remove();
+        if (mainApp) mainApp.style.display = '';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchTerm = urlParams.get('search');
+        if (searchTerm && pageName === 'tasks') {
+            const inp = document.getElementById('global-search');
+            if (inp) inp.value = searchTerm;
+            Tasks.setSearch(searchTerm);
+        }
+
+        bindGlobalEvents(pageName);
+
+        if (!isGuestUser(activeUser)) {
+            setInterval(() => Notifications.checkDeadlines(), 300000);
+        }
+    }
+
+    function renderPage(pageName) {
+        switch (pageName) {
             case 'dashboard':     Dashboard.renderPage(); break;
             case 'projects':      Projects.renderPage(); break;
             case 'tasks':         Tasks.renderPage(); break;
@@ -89,45 +87,49 @@ const App = (() => {
             case 'analytics':     Analytics.renderPage(); break;
             case 'notifications': Notifications.renderPage(); break;
             case 'profile':       Profile.renderPage(); break;
-            case 'admin':         Admin.renderPage(); break;
         }
-
-        // Close mobile sidebar
-        document.getElementById('sidebar').classList.remove('mobile-open');
-        document.querySelector('.sidebar-overlay')?.classList.remove('show');
-
-        // Scroll to top
-        document.querySelector('.page-container')?.scrollTo(0, 0);
     }
 
-    /** Update user info in header/sidebar */
     function updateUserUI() {
         const user = Store.getCurrentUser();
         if (!user) return;
         const initials = (user.firstName[0] || '') + (user.lastName[0] || '');
         const fullName = `${user.firstName} ${user.lastName}`;
-
         const el = id => document.getElementById(id);
-        if (el('user-initials')) el('user-initials').textContent = initials.toUpperCase();
-        if (el('dropdown-user-name')) el('dropdown-user-name').textContent = fullName;
+        if (el('user-initials'))       el('user-initials').textContent       = initials.toUpperCase();
+        if (el('dropdown-user-name'))  el('dropdown-user-name').textContent  = fullName;
         if (el('dropdown-user-email')) el('dropdown-user-email').textContent = user.email;
+    }
+
+    function applyGuestMode(user) {
+        document.body.classList.toggle('guest-mode', isGuestUser(user));
+        if (!isGuestUser(user) || document.getElementById('guest-mode-banner')) return;
+
+        const header = document.querySelector('.main-header');
+        if (!header) return;
+
+        header.insertAdjacentHTML('afterend', `
+            <div class="guest-mode-banner" id="guest-mode-banner">
+                <strong>${I18n.t('auth.guestMode')}</strong>
+                <span>${I18n.t('auth.registerPrompt')}</span>
+                <a href="index.html">${I18n.t('auth.signInRegister')}</a>
+            </div>
+        `);
     }
 
     /* ========================
        Modal Management
        ======================== */
     function openModal(html) {
-        const overlay = document.getElementById('modal-overlay');
+        const overlay   = document.getElementById('modal-overlay');
         const container = document.getElementById('modal-container');
         container.innerHTML = html;
         overlay.classList.remove('hidden');
 
-        // Close on overlay click
         overlay.addEventListener('click', e => {
             if (e.target === overlay) closeModal();
         });
 
-        // Close on Escape
         const escHandler = e => {
             if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', escHandler); }
         };
@@ -142,21 +144,11 @@ const App = (() => {
     /* ========================
        Global Event Bindings
        ======================== */
-    function bindGlobalEvents() {
-        // Sidebar navigation
-        document.querySelectorAll('.nav-item[data-page]').forEach(item => {
-            item.addEventListener('click', e => {
-                e.preventDefault();
-                navigateTo(item.dataset.page);
-            });
-        });
-
-        // Sidebar collapse toggle
+    function bindGlobalEvents(pageName) {
         document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
             document.getElementById('sidebar').classList.toggle('collapsed');
         });
 
-        // Mobile menu
         document.getElementById('mobile-menu-btn')?.addEventListener('click', () => {
             document.getElementById('sidebar').classList.toggle('mobile-open');
             let overlay = document.querySelector('.sidebar-overlay');
@@ -172,95 +164,121 @@ const App = (() => {
             overlay.classList.toggle('show');
         });
 
-        // Theme toggle
-        document.getElementById('theme-toggle')?.addEventListener('click', () => {
+        const themeToggle = document.getElementById('theme-toggle');
+        const syncThemeToggle = (theme) => {
+            if (!themeToggle) return;
+            const sunIcon = themeToggle.querySelector('.sun-icon');
+            const moonIcon = themeToggle.querySelector('.moon-icon');
+            if (sunIcon && moonIcon) {
+                sunIcon.classList.toggle('hidden', theme === 'light');
+                moonIcon.classList.toggle('hidden', theme === 'dark');
+            }
+            themeToggle.setAttribute('aria-label', theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+            themeToggle.setAttribute('title', theme === 'dark' ? 'Gaiša tēma' : 'Tumša tēma');
+        };
+
+        themeToggle?.addEventListener('click', () => {
             const html = document.documentElement;
-            const current = html.getAttribute('data-theme');
+            const current = html.getAttribute('data-theme') || 'dark';
             const next = current === 'dark' ? 'light' : 'dark';
             html.setAttribute('data-theme', next);
             localStorage.setItem('tf_theme', next);
+            syncThemeToggle(next);
         });
 
-        // Restore saved theme
-        const savedTheme = localStorage.getItem('tf_theme');
-        if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+        syncThemeToggle(localStorage.getItem('tf_theme') || 'dark');
 
-        // Language toggle
         document.getElementById('lang-toggle')?.addEventListener('click', e => {
             e.stopPropagation();
             document.querySelector('.language-selector').classList.toggle('open');
         });
 
+        const savedLang = localStorage.getItem('tf_lang') || 'lv';
+        document.getElementById('current-lang').textContent = savedLang.toUpperCase();
         document.querySelectorAll('.language-dropdown button').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.lang === savedLang);
             btn.addEventListener('click', () => {
                 const lang = btn.dataset.lang;
                 I18n.setLang(lang);
+                document.getElementById('current-lang').textContent = lang.toUpperCase();
                 document.querySelectorAll('.language-dropdown button').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 document.querySelector('.language-selector').classList.remove('open');
-                // Re-render current page with new language
-                navigateTo(currentPage);
+                renderPage(pageName);
+                I18n.updateDOM();
             });
         });
 
-        // User menu
         document.getElementById('user-menu-btn')?.addEventListener('click', e => {
             e.stopPropagation();
             document.querySelector('.user-menu').classList.toggle('open');
         });
 
-        // Profile link in dropdown
-        document.querySelectorAll('.dropdown-item[data-page]').forEach(item => {
-            item.addEventListener('click', e => {
-                e.preventDefault();
-                document.querySelector('.user-menu').classList.remove('open');
-                navigateTo(item.dataset.page);
-            });
-        });
-
-        // Close dropdowns on outside click
         document.addEventListener('click', () => {
             document.querySelector('.language-selector')?.classList.remove('open');
             document.querySelector('.user-menu')?.classList.remove('open');
         });
 
-        // Logout buttons
-        document.getElementById('logout-btn')?.addEventListener('click', e => {
+        const doLogout = async e => {
             e.preventDefault();
-            Auth.logout();
-            showAuth();
-        });
-        document.getElementById('dropdown-logout')?.addEventListener('click', e => {
-            e.preventDefault();
-            document.querySelector('.user-menu').classList.remove('open');
-            Auth.logout();
-            showAuth();
-        });
+            if (isGuestUser()) {
+                Store.clearAppData();
+            } else {
+                await Auth.logout();
+            }
+            window.location.href = 'index.html';
+        };
+        document.getElementById('logout-btn')?.addEventListener('click', doLogout);
+        document.getElementById('dropdown-logout')?.addEventListener('click', doLogout);
+        document.getElementById('footer-logout-btn')?.addEventListener('click', doLogout);
 
-        // Notification bell
         document.getElementById('notifications-btn')?.addEventListener('click', () => {
-            navigateTo('notifications');
+            window.location.href = 'notifications.html';
         });
 
-        // Global search
         const searchInput = document.getElementById('global-search');
         if (searchInput) {
             searchInput.addEventListener('input', Utils.debounce(e => {
                 const term = e.target.value.trim();
-                if (term.length > 0) {
-                    navigateTo('tasks');
-                    setTimeout(() => Tasks.setSearch(term), 50);
+                if (!term) return;
+                if (pageName === 'tasks') {
+                    Tasks.setSearch(term);
+                } else {
+                    window.location.href = `tasks.html?search=${encodeURIComponent(term)}`;
                 }
             }, 400));
         }
+
+        document.addEventListener('click', e => {
+            if (!isGuestUser()) return;
+            const blocked = e.target.closest('[data-requires-auth="true"]');
+            if (!blocked) return;
+            e.preventDefault();
+            e.stopPropagation();
+            requireAccount();
+        }, true);
+
+        document.addEventListener('submit', e => {
+            if (!isGuestUser()) return;
+            if (!e.target.closest('[data-requires-auth="true"]')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            requireAccount();
+        }, true);
+
+        document.addEventListener('change', e => {
+            if (!isGuestUser()) return;
+            if (!e.target.closest('[data-requires-auth="true"]')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            requireAccount();
+            renderPage(pageName);
+        }, true);
     }
 
-    return { init, showMainApp, showAuth, navigateTo, openModal, closeModal, updateUserUI };
+    return { init, isGuestUser, requireAccount, updateUserUI, openModal, closeModal };
 })();
 
-// ============================================
-// Boot
-// ============================================
 document.addEventListener('DOMContentLoaded', () => {
     App.init();
 });
