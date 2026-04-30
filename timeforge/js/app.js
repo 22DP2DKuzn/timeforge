@@ -19,7 +19,10 @@ const App = (() => {
         I18n.updateDOM();
 
         const pageName = document.body.dataset.page;
-        if (!pageName) return;
+        if (!pageName) {
+            Auth.init();
+            return;
+        }
 
         const user = await Auth.checkSession();
         const activeUser = user || Auth.getGuestUser();
