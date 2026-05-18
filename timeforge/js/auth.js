@@ -1,6 +1,6 @@
 /* ============================================
-   TimeForge — Auth
-   Register, Login, Logout, Session (PHP API)
+   TimeForge — Autorizācija
+   Reģistrācija, pieslēgšanās, atslēgšanās, sesija (PHP API)
    ============================================ */
 
 const Auth = (() => {
@@ -22,7 +22,7 @@ const Auth = (() => {
         isGuest: true,
     });
 
-    /* --- Register --- */
+    /* --- Reģistrācija --- */
     async function register(firstName, lastName, email, password) {
         if (!firstName || !lastName || !email || !password) {
             return { ok: false, error: 'error.fillRequired' };
@@ -46,7 +46,7 @@ const Auth = (() => {
         }
     }
 
-    /* --- Login --- */
+    /* --- Pieslēgšanās --- */
     async function login(email, password) {
         if (!email || !password) {
             return { ok: false, error: 'error.fillRequired' };
@@ -68,7 +68,7 @@ const Auth = (() => {
         }
     }
 
-    /* --- Logout --- */
+    /* --- Atslēgšanās --- */
     async function logout() {
         try {
             await fetch(`${API}/logout.php`, { method: 'POST' });
@@ -76,7 +76,7 @@ const Auth = (() => {
         Store.clearAppData();
     }
 
-    /* --- Check session --- */
+    /* --- Sesijas pārbaude --- */
     async function checkSession() {
         try {
             const res = await fetch(`${API}/check.php`);
@@ -96,7 +96,7 @@ const Auth = (() => {
         });
     }
 
-    /* --- Init auth UI --- */
+    /* --- Inicializēt autorizācijas UI --- */
     function init() {
         const loginForm    = document.getElementById('login-form');
         const registerForm = document.getElementById('register-form');
@@ -106,7 +106,7 @@ const Auth = (() => {
         const loginPage    = document.getElementById('login-page');
         const registerPage = document.getElementById('register-page');
 
-        // Toggle pages
+        // Pārslēgt starp pieslēgšanās un reģistrācijas formu
         showRegister.addEventListener('click', e => {
             e.preventDefault();
             loginPage.classList.remove('active');
@@ -123,7 +123,7 @@ const Auth = (() => {
             window.location.href = 'dashboard.html';
         });
 
-        // Password visibility toggles
+        // Parādīt/paslēpt paroles lauku
         document.querySelectorAll('.toggle-password').forEach(btn => {
             btn.addEventListener('click', () => {
                 const input = btn.parentElement.querySelector('input');
@@ -134,7 +134,7 @@ const Auth = (() => {
             });
         });
 
-        // Password strength indicator on register
+        // Paroles stipruma indikators reģistrācijā
         const passInput = document.getElementById('register-password');
         if (passInput) {
             passInput.addEventListener('input', () => {
@@ -158,7 +158,7 @@ const Auth = (() => {
             });
         }
 
-        // Login form submit
+        // Pieslēgšanās formas iesniegšana
         loginForm.addEventListener('submit', async e => {
             e.preventDefault();
             const email    = document.getElementById('login-email').value.trim();
@@ -178,7 +178,7 @@ const Auth = (() => {
             }
         });
 
-        // Register form submit
+        // Reģistrācijas formas iesniegšana
         registerForm.addEventListener('submit', async e => {
             e.preventDefault();
             const firstName = document.getElementById('register-firstname').value.trim();
@@ -218,7 +218,7 @@ const Auth = (() => {
             }
         });
 
-        // Ripple on auth buttons
+        // Ripple efekts autorizācijas pogām
         document.querySelectorAll('.ripple').forEach(btn => {
             btn.addEventListener('click', Utils.createRipple);
         });

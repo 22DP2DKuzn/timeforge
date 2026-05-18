@@ -1,13 +1,13 @@
 /* ============================================
-   TimeForge — Projects
-   CRUD, render list, modal forms, status
+   TimeForge — Projekti
+   CRUD, saraksta attēlošana, modāļu formas, statusi
    ============================================ */
 
 const Projects = (() => {
     const COLORS = ['#5641FF','#FF6CD2','#4ade80','#60a5fa','#fb923c','#facc15','#f43f5e','#a78bfa','#34d399','#fbbf24'];
     const ICONS = ['📁','📊','💼','🎯','🚀','💡','📝','🎨','🔧','📱','🌐','🏠'];
 
-    /** Render projects page */
+    /** Attēlot projektu lapu ar hero-joslu un projektu kartīnām */
     function renderPage() {
         const user = Store.getCurrentUser();
         if (!user) return;
@@ -130,10 +130,10 @@ const Projects = (() => {
             });
         });
 
-        // Ripple
+        // Ripple efekts pogām
         document.querySelectorAll('#projects-page .ripple').forEach(b => b.addEventListener('click', Utils.createRipple));
 
-        // Card click -> show tasks for project
+        // Klikšķis uz projekta kartiņas atver tā uzdevumus
         document.querySelectorAll('.project-card').forEach(card => {
             card.addEventListener('click', () => {
                 const pid = card.dataset.projectId;
@@ -142,7 +142,7 @@ const Projects = (() => {
         });
     }
 
-    /** Open create/edit modal */
+    /** Atvērt projekta izveides vai rediģēšanas modāli */
     function openModal(editId) {
         if (App.isGuestUser()) return App.requireAccount();
         const project = editId ? Store.getProjectById(editId) : null;
@@ -210,7 +210,7 @@ const Projects = (() => {
 
         App.openModal(html);
 
-        // Color/icon selection
+        // Krāsas un ikonas izvēle
         document.querySelectorAll('.color-option').forEach(el => {
             el.addEventListener('click', () => {
                 document.querySelectorAll('.color-option').forEach(e => e.classList.remove('selected'));
@@ -226,7 +226,7 @@ const Projects = (() => {
             });
         });
 
-        // Save
+        // Saglabāt projektu (izveidot vai atjaunināt)
         document.getElementById('modal-save-btn').addEventListener('click', () => {
             const name = document.getElementById('pf-name').value.trim();
             if (!name) { Toast.error(I18n.t('common.error'), I18n.t('error.required')); return; }
@@ -245,10 +245,12 @@ const Projects = (() => {
                 Store.updateProject(editId, data);
                 Toast.success(I18n.t('common.success'), I18n.t('projects.edit'));
             } else {
-                data.userId = Store.getCurrentUser().id;
+                const _pu = Store.getCurrentUser();
+                data.userId = _pu.id;
                 Store.createProject(data);
+                Store.logActivity(_pu.id, 'project_created', data.name || '');
                 Toast.success(I18n.t('common.success'), I18n.t('projects.create'));
-                Achievements.checkAll(Store.getCurrentUser());
+                Achievements.checkAll(_pu);
             }
             App.closeModal();
             renderPage();
@@ -258,7 +260,7 @@ const Projects = (() => {
         document.getElementById('modal-close-btn').addEventListener('click', () => App.closeModal());
     }
 
-    /** Confirm delete */
+    /** Parādīt apstiprinājuma modāli pirms projekta dzēšanas */
     function confirmDelete(id) {
         if (App.isGuestUser()) return App.requireAccount();
         const html = `
@@ -280,7 +282,9 @@ const Projects = (() => {
         `;
         App.openModal(html);
         document.getElementById('confirm-yes').addEventListener('click', () => {
+            const _dp = Store.getProjectById(id);
             Store.deleteProject(id);
+            Store.logActivity(Store.getCurrentUser()?.id, 'project_deleted', _dp?.name || '');
             Toast.success(I18n.t('common.success'), I18n.t('projects.delete'));
             App.closeModal();
             renderPage();

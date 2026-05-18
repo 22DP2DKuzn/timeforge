@@ -48,6 +48,13 @@ if ($user['last_active_date'] !== $today) {
 $_SESSION['user_id'] = $user['id'];
 $_SESSION['expires'] = time() + 86400;
 
+// Log login event
+try {
+    $logId = substr(bin2hex(random_bytes(12)), 0, 24);
+    $pdo->prepare('INSERT INTO activity_log (id, user_id, action, details) VALUES (?, ?, ?, ?)')
+        ->execute([$logId, $user['id'], 'login', 'Logged in']);
+} catch (Exception $e) { /* ignore */ }
+
 echo json_encode([
     'ok'   => true,
     'user' => [

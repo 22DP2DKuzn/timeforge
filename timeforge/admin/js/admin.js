@@ -52,10 +52,10 @@ async function loadAll() {
         apiFetch('GET', `${API}/data/quotes.php`),
         apiFetch('GET', `${API}/data/admin_stats.php`),
     ]);
-    state.users  = usersRes?.ok  ? usersRes.data   : [];
-    state.quotes = quotesRes?.ok ? quotesRes.data   : [];
-    state.stats  = statsRes?.ok  ? statsRes.stats   : {};
-    state.logs   = statsRes?.ok  ? statsRes.logs    : [];
+    state.users  = usersRes?.ok  ? (usersRes.data  ?? [])                   : [];
+    state.quotes = quotesRes?.ok ? (quotesRes.data?.quotes ?? quotesRes.data ?? []) : [];
+    state.stats  = statsRes?.ok  ? (statsRes.data?.stats   ?? {})            : {};
+    state.logs   = statsRes?.ok  ? (statsRes.data?.logs    ?? [])            : [];
     updateNavCounts();
     el('last-updated').textContent = 'Updated ' + formatTime(new Date());
 }
@@ -90,13 +90,15 @@ function navigate(section) {
    Overview
    ============================================================ */
 function renderOverview() {
-    const s = state.stats;
+    const s = state.stats || {};
     const cards = [
         { label: 'Total Users',    value: s.totalUsers    || 0, color: '#5641FF', bg: 'rgba(86,65,255,0.12)',   icon: svgUsers() },
         { label: 'Active Users',   value: s.activeUsers   || 0, color: '#4ade80', bg: 'rgba(74,222,128,0.12)',  icon: svgUserCheck() },
         { label: 'Total Tasks',    value: s.totalTasks    || 0, color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',  icon: svgChecklist() },
         { label: 'Focus Sessions', value: s.focusSessions || 0, color: '#fb923c', bg: 'rgba(251,146,60,0.12)',  icon: svgTimer() },
-        { label: 'Quotes',         value: s.totalQuotes   || 0, color: '#FF6CD2', bg: 'rgba(255,108,210,0.12)', icon: svgQuote() },
+        { label: 'Projects',       value: s.totalProjects || 0, color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: svgFolder() },
+        { label: 'Log Entries',    value: s.totalLogEntries || 0, color: '#38bdf8', bg: 'rgba(56,189,248,0.12)', icon: svgLog() },
+        { label: 'Achievements',   value: s.totalAchievements || 0, color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', icon: svgTrophy() },
         { label: 'Blocked',        value: s.blockedUsers  || 0, color: '#f43f5e', bg: 'rgba(244,63,94,0.12)',   icon: svgBlock() },
     ];
     el('stats-grid').innerHTML = cards.map(c => `
@@ -166,7 +168,7 @@ function renderUsers() {
 
     el('users-tbody').innerHTML = list.map(u => {
         const isSelf = u.id === state.user.id;
-        const xpNext = u.level * 100;
+        const xpNext = u.level * 50;
         const xpPct  = Math.min(100, Math.round((u.xp % xpNext) / xpNext * 100));
         return `
         <tr>
@@ -226,7 +228,7 @@ function openUserDetail(uid) {
     const u = state.users.find(u => String(u.id) === String(uid));
     if (!u) return;
     const isSelf   = u.id === state.user.id;
-    const xpNext   = u.level * 100;
+    const xpNext   = u.level * 50;
     const xpPct    = Math.min(100, Math.round((u.xp % xpNext) / xpNext * 100));
     const joinDays  = Math.floor((Date.now() - new Date(u.createdAt)) / 86400000);
 
@@ -804,3 +806,6 @@ function svgChecklist() { return `<svg viewBox="0 0 24 24" fill="none" stroke="c
 function svgTimer()     { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`; }
 function svgQuote()     { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`; }
 function svgBlock()     { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`; }
+function svgFolder()    { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`; }
+function svgLog()       { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`; }
+function svgTrophy()    { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 21 12 17 16 21"/><line x1="12" y1="17" x2="12" y2="11"/><path d="M7 4H4v4a4 4 0 0 0 8 0V4H7z"/><path d="M17 4h3v4a4 4 0 0 1-8 0V4h3z"/></svg>`; }

@@ -1,6 +1,6 @@
 /* ============================================
-   TimeForge — Dashboard
-   Stats, upcoming tasks, recent projects, quote
+   TimeForge — Panelis
+   Statistika, gaidāmie uzdevumi, nesenie projekti, citāts
    ============================================ */
 
 const Dashboard = (() => {
@@ -29,6 +29,7 @@ const Dashboard = (() => {
         const info = Achievements.getLevel(user.xp || 0);
         const xpPct = Math.round((info.currentXp / info.neededXp) * 100);
 
+        // Sveiciens atkarīgs no diennakts laika
         const hour = new Date().getHours();
         const greeting = hour < 12
             ? (I18n.getLang() === 'lv' ? 'Labrīt' : 'Good morning')
@@ -195,6 +196,7 @@ const Dashboard = (() => {
             </div>
         `;
 
+        // Ielādēt citātu un sākt automātisko rotāciju
         Quotes.renderQuoteCard('dashboard-quote');
         Quotes.startRotation();
         bindEvents();

@@ -45,6 +45,13 @@ $stmt = $pdo->prepare(
 $stmt->execute([$firstName, $lastName, $email, $hash, $role]);
 $userId = (int)$pdo->lastInsertId();
 
+// Log register event
+try {
+    $logId = substr(bin2hex(random_bytes(12)), 0, 24);
+    $pdo->prepare('INSERT INTO activity_log (id, user_id, action, details) VALUES (?, ?, ?, ?)')
+        ->execute([$logId, $userId, 'register', "Registered as $role"]);
+} catch (Exception $e) { /* ignore */ }
+
 echo json_encode([
     'ok'   => true,
     'user' => [

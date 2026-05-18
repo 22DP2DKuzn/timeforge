@@ -1,6 +1,6 @@
 /* ============================================
-   TimeForge — App Controller (MPA)
-   Per-page init, modals, theme, sidebar, search
+   TimeForge — Lietotnes kontrolieris (MPA)
+   Lapas inicializācija, modāļi, tēma, sānjosla, meklēšana
    ============================================ */
 
 const App = (() => {
@@ -58,7 +58,7 @@ const App = (() => {
         renderPage(pageName);
         applyGuestMode(activeUser);
 
-        // Reveal app, hide loader
+        // Parādīt lietotni, noņemt ielādes ekrānu
         const loader = document.getElementById('app-loader');
         const mainApp = document.getElementById('main-app');
         if (loader) loader.remove();
@@ -121,7 +121,7 @@ const App = (() => {
     }
 
     /* ========================
-       Modal Management
+       Modāļu pārvaldība
        ======================== */
     function openModal(html) {
         const overlay   = document.getElementById('modal-overlay');
@@ -145,7 +145,7 @@ const App = (() => {
     }
 
     /* ========================
-       Global Event Bindings
+       Globālie notikumu klausītāji
        ======================== */
     function bindGlobalEvents(pageName) {
         document.getElementById('sidebar-toggle')?.addEventListener('click', () => {

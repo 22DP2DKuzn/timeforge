@@ -1,12 +1,12 @@
 /* ============================================
-   TimeForge — Tasks
-   CRUD, filter, search, complete toggle, meetings
+   TimeForge — Uzdevumi
+   CRUD, filtri, meklēšana, pabeigšana, sapulces
    ============================================ */
 
 const Tasks = (() => {
     let filters = { priority:'all', status:'all', project:'all', category:'all', dateFrom:'', dateTo:'', search:'' };
 
-    /** Render tasks page */
+    /** Attēlot uzdevumu lapu ar hero-joslu, filtriem un sarakstu */
     function renderPage() {
         const user = Store.getCurrentUser();
         if (!user) return;
@@ -89,7 +89,7 @@ const Tasks = (() => {
         bindPageEvents();
     }
 
-    /** Render filtered task list */
+    /** Attēlot filtrēto uzdevumu sarakstu */
     function renderTaskList() {
         const user = Store.getCurrentUser();
         if (!user) return;
@@ -98,7 +98,7 @@ const Tasks = (() => {
 
         let tasks = Store.getTasks(user.id);
 
-        // Apply filters
+        // Piemērot aktīvos filtrus
         if (filters.priority !== 'all') tasks = tasks.filter(t => t.priority === filters.priority);
         if (filters.status !== 'all') tasks = tasks.filter(t => t.status === filters.status);
         if (filters.project !== 'all') tasks = tasks.filter(t => t.projectId === filters.project);
@@ -110,7 +110,7 @@ const Tasks = (() => {
             tasks = tasks.filter(t => t.name.toLowerCase().includes(s) || (t.description || '').toLowerCase().includes(s));
         }
 
-        // Sort: incomplete first, then by date
+        // Šķirot: nepabeigti vispirms, tad hronoloģiski pēc datuma un laika
         tasks.sort((a,b) => {
             if (a.status === 'completed' && b.status !== 'completed') return 1;
             if (b.status === 'completed' && a.status !== 'completed') return -1;
@@ -131,7 +131,7 @@ const Tasks = (() => {
         bindTaskCardEvents();
     }
 
-    /** Render single task card HTML */
+    /** Ģenerēt viena uzdevuma kartiņas HTML (izmanto arī panelis) */
     function renderTaskCard(task) {
         const project = task.projectId ? Store.getProjectById(task.projectId) : null;
         const isComplete = task.status === 'completed';
@@ -164,7 +164,7 @@ const Tasks = (() => {
         document.getElementById('new-task-btn')?.addEventListener('click', () => openModal());
         document.querySelectorAll('#tasks-page .ripple').forEach(b => b.addEventListener('click', Utils.createRipple));
 
-        // Filter change handlers
+        // Filtru izmaiņu apstrādātāji
         ['filter-priority','filter-status','filter-project','filter-category'].forEach(id => {
             document.getElementById(id)?.addEventListener('change', e => {
                 const key = id.replace('filter-','');
@@ -188,7 +188,7 @@ const Tasks = (() => {
     }
 
     function bindTaskCardEvents() {
-        // Checkbox toggle
+        // Uzdevuma pabeigšanas/atcelšanas pārslēgšana
         document.querySelectorAll('.task-card-checkbox').forEach(cb => {
             cb.addEventListener('click', e => {
                 e.stopPropagation();
@@ -200,28 +200,30 @@ const Tasks = (() => {
                     Store.updateTask(taskId, { status:'completed', completedAt: new Date().toISOString() });
                     cb.classList.add('checked');
                     cb.closest('.task-card').classList.add('completed');
-                    // Confetti + check animation
+                    // Konfeti + atzīmes animācija
                     Confetti.fire(40);
                     cb.style.animation = 'checkPop 0.4s ease';
                     Toast.success('✅', I18n.t('tasks.completed'));
-                    Achievements.checkAll(Store.getCurrentUser());
+                    const _u = Store.getCurrentUser();
+                    Store.logActivity(_u?.id, 'task_completed', task.name || '');
+                    Achievements.checkAll(_u);
                 } else {
                     Store.updateTask(taskId, { status:'planned', completedAt: null });
                     cb.classList.remove('checked');
                     cb.closest('.task-card').classList.remove('completed');
                 }
-                // Refresh after short delay
+                // Atjaunināt sarakstu pēc animācijas
                 setTimeout(renderTaskList, 500);
             });
         });
 
-        // Card click -> edit
+        // Klikšķis uz kartiņas atver rediģēšanas modāli
         document.querySelectorAll('.task-card').forEach(card => {
             card.addEventListener('click', () => openModal(card.dataset.taskId));
         });
     }
 
-    /** Open create/edit task modal */
+    /** Atvērt uzdevuma izveides vai rediģēšanas modāli */
     function openModal(editId, presetDate) {
         if (App.isGuestUser()) return App.requireAccount();
         const user = Store.getCurrentUser();
@@ -324,14 +326,14 @@ const Tasks = (() => {
 
         App.openModal(html);
 
-        // Show location for meetings
+        // Rādīt atrašanās vietas lauku tikai sapulcēm
         const typeSelect = document.getElementById('tf-type');
         const locationGroup = document.getElementById('tf-location-group');
         const showLocation = () => { locationGroup.style.display = typeSelect.value === 'meeting' ? 'flex' : 'none'; };
         typeSelect.addEventListener('change', showLocation);
         showLocation();
 
-        // Save
+        // Saglabāt uzdevumu (izveidot vai atjaunināt)
         document.getElementById('modal-save-btn').addEventListener('click', () => {
             const name = document.getElementById('tf-name').value.trim();
             const date = document.getElementById('tf-date').value;
@@ -360,6 +362,7 @@ const Tasks = (() => {
             } else {
                 data.userId = user.id;
                 Store.createTask(data);
+                Store.logActivity(user.id, 'task_created', data.name || '');
                 Toast.success(I18n.t('common.success'), I18n.t('tasks.new'));
                 Achievements.checkAll(user);
             }
@@ -367,7 +370,7 @@ const Tasks = (() => {
             renderPage();
         });
 
-        // Delete
+        // Dzēst uzdevumu caur apstiprinājuma modāli
         document.getElementById('modal-delete-btn')?.addEventListener('click', () => {
             App.closeModal();
             confirmDelete(editId);
@@ -395,12 +398,19 @@ const Tasks = (() => {
                 </div>
             </div>`;
         App.openModal(html);
-        document.getElementById('confirm-yes').addEventListener('click', () => { Store.deleteTask(id); Toast.success(I18n.t('common.success'), I18n.t('tasks.delete')); App.closeModal(); renderPage(); });
+        document.getElementById('confirm-yes').addEventListener('click', () => {
+            const _del = Store.getTaskById(id);
+            Store.deleteTask(id);
+            Store.logActivity(Store.getCurrentUser()?.id, 'task_deleted', _del?.name || '');
+            Toast.success(I18n.t('common.success'), I18n.t('tasks.delete'));
+            App.closeModal();
+            renderPage();
+        });
         document.getElementById('confirm-no').addEventListener('click', () => App.closeModal());
         document.getElementById('modal-close-btn').addEventListener('click', () => App.closeModal());
     }
 
-    /** Set search filter from global search */
+    /** Iestatīt meklēšanas filtru no globālās meklēšanas joslas */
     function setSearch(term) { filters.search = term; renderTaskList(); }
 
     return { renderPage, renderTaskCard, openModal, setSearch };

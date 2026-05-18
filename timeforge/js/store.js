@@ -1,6 +1,6 @@
 /* ============================================
-   TimeForge — Store
-   Write-through cache: localStorage + MySQL API
+   TimeForge — Datu glabātuve
+   Rakstīšanas kešatmiņa: localStorage + MySQL API
    ============================================ */
 
 const Store = (() => {
@@ -17,7 +17,7 @@ const Store = (() => {
         settings:        'tf_settings',
     };
 
-    /* --- localStorage helpers --- */
+    /* --- localStorage palīgfunkcijas --- */
     function _get(key) {
         try { return JSON.parse(localStorage.getItem(key)) || []; }
         catch { return []; }
@@ -28,14 +28,14 @@ const Store = (() => {
         catch { return null; }
     }
 
-    /* --- API helper (fire-and-forget to MySQL) --- */
+    /* --- API pieprasījums uz MySQL (fire-and-forget, kļūdas tiek ignorētas) --- */
     function _api(method, endpoint, data = null) {
         const opts = { method, headers: { 'Content-Type': 'application/json' } };
         if (data) opts.body = JSON.stringify(data);
         return fetch('api/data/' + endpoint, opts).catch(() => null);
     }
 
-    /* --- Hydrate localStorage from MySQL on login --- */
+    /* --- Ielādēt visus lietotāja datus no MySQL pēc pieslēgšanās --- */
     async function hydrate() {
         try {
             const res = await fetch('api/data/hydrate.php');
@@ -55,7 +55,7 @@ const Store = (() => {
     }
 
     /* =========================
-       CURRENT USER (session)
+       PAŠREIZĒJAIS LIETOTĀJS (sesija)
        ========================= */
     function getCurrentUser()    { return _getObj(KEYS.currentUser); }
     function setCurrentUser(u)   { _set(KEYS.currentUser, u); }
@@ -65,7 +65,7 @@ const Store = (() => {
     }
 
     /* =========================
-       USERS (admin only, read)
+       LIETOTĀJI (tikai admins)
        ========================= */
     async function getUsers() {
         try {
@@ -94,7 +94,7 @@ const Store = (() => {
     }
 
     /* =========================
-       PROJECTS
+       PROJEKTI
        ========================= */
     function getProjects(userId) {
         const all = _get(KEYS.projects);
@@ -142,7 +142,7 @@ const Store = (() => {
     }
 
     /* =========================
-       TASKS
+       UZDEVUMI
        ========================= */
     function getTasks(userId) {
         const all = _get(KEYS.tasks);
@@ -194,7 +194,7 @@ const Store = (() => {
     }
 
     /* =========================
-       FOCUS SESSIONS
+       FOKUSA SESIJAS
        ========================= */
     function getFocusSessions(userId) {
         const all = _get(KEYS.focusSessions);
@@ -221,7 +221,7 @@ const Store = (() => {
     }
 
     /* =========================
-       NOTIFICATIONS
+       PAZIŅOJUMI
        ========================= */
     function getNotifications(userId) {
         const all = _get(KEYS.notifications);
@@ -266,7 +266,7 @@ const Store = (() => {
     }
 
     /* =========================
-       QUOTES
+       CITĀTI
        ========================= */
     function getQuotes()       { return _get(KEYS.quotes); }
 
@@ -316,7 +316,7 @@ const Store = (() => {
     }
 
     /* =========================
-       ACHIEVEMENTS
+       SASNIEGUMI
        ========================= */
     function getUserAchievements(_userId) {
         const all = _get(KEYS.achievements);
@@ -333,7 +333,7 @@ const Store = (() => {
     }
 
     /* =========================
-       ACTIVITY LOG
+       AKTIVITĀTES ŽURNĀLS
        ========================= */
     function logActivity(userId, action, details) {
         const log = _get(KEYS.activityLog);
@@ -345,7 +345,7 @@ const Store = (() => {
             timestamp: new Date().toISOString(),
         };
         log.push(entry);
-        if (log.length > 500) log.splice(0, log.length - 500);
+        if (log.length > 500) log.splice(0, log.length - 500); // Ierobežot žurnālu līdz 500 ierakstiem
         _set(KEYS.activityLog, log);
         _api('POST', 'activity.php', entry);
     }
@@ -353,7 +353,7 @@ const Store = (() => {
     function getActivityLog() { return _get(KEYS.activityLog); }
 
     /* =========================
-       SETTINGS
+       IESTATĪJUMI
        ========================= */
     function getSettings() {
         return _getObj(KEYS.settings) || { emailNotifications: true, reminder24h: true, reminder1h: true };
@@ -367,9 +367,9 @@ const Store = (() => {
     }
 
     /* =========================
-       SEED (now handled by API)
+       SĒKLAS DATI (apstrādā API)
        ========================= */
-    function seedQuotes() { /* seeding is done server-side in hydrate.php */ }
+    function seedQuotes() { /* citātu sēklas dati tiek pievienoti serverī, hydrate.php */ }
 
     return {
         hydrate,

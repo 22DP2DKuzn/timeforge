@@ -10,19 +10,21 @@ const PetAssistant = (() => {
 
     const defaults = { type: 'fox', name: 'Nova', accent: '#7B5EFF' };
 
+    /* levelRequired = minimum user level to use this skin */
     const PETS = {
-        fox:    { emoji: '🦊', style: 'quick, witty, practical' },
-        cat:    { emoji: '🐱', style: 'gentle, cozy, reassuring' },
-        rabbit: { emoji: '🐰', style: 'energetic, motivating, playful' },
-        owl:    { emoji: '🦉', style: 'calm, wise, strategic' },
-        dragon: { emoji: '🐲', style: 'bold, inspiring, powerful' },
+        fox:    { emoji: '🦊', style: 'quick, witty, practical',         levelRequired: 2 },
+        cat:    { emoji: '🐱', style: 'gentle, cozy, reassuring',        levelRequired: 3 },
+        rabbit: { emoji: '🐰', style: 'energetic, motivating, playful',  levelRequired: 4 },
+        owl:    { emoji: '🦉', style: 'calm, wise, strategic',           levelRequired: 5 },
+        dragon: { emoji: '🐲', style: 'bold, inspiring, powerful',       levelRequired: 6 },
     };
 
     /* ─── state ──────────────────────────────── */
-    let settings = { ...defaults };
-    let history  = [];
-    let thinking = false;
-    let chatOpen = false;
+    let settings  = { ...defaults };
+    let history   = [];
+    let thinking  = false;
+    let chatOpen  = false;
+    let userLevel = 1;
 
     /* ─── movement ───────────────────────────── */
     let pos    = { x: 0, y: 0 };
@@ -49,8 +51,20 @@ const PetAssistant = (() => {
        INIT
     ══════════════════════════════════════════ */
     function init() {
+        /* Pet unlocks at level 2 */
+        const u = typeof Store !== 'undefined' && Store.getCurrentUser?.() || null;
+        userLevel = u?.level || 1;
+        if (userLevel < 2) return;
+
+        if (document.getElementById('pet-root')) return; // already injected
+
         settings = loadJSON(SETTINGS_KEY, defaults);
         history  = loadJSON(HISTORY_KEY, []);
+
+        /* Fallback to fox if saved skin is not yet unlocked */
+        if (!PETS[settings.type] || userLevel < PETS[settings.type].levelRequired) {
+            settings.type = 'fox';
+        }
 
         pos.x = window.innerWidth  - 140;
         pos.y = window.innerHeight - 120;
@@ -69,6 +83,13 @@ const PetAssistant = (() => {
         renderMessages();
         startMovement();
         setTimeout(showIdleBubble, 8000);
+    }
+
+    /* Called by Achievements when user reaches level 2+ */
+    function tryInit() {
+        const u = typeof Store !== 'undefined' && Store.getCurrentUser?.() || null;
+        userLevel = u?.level || 1;
+        if (userLevel >= 2 && !document.getElementById('pet-root')) init();
     }
 
     /* ══════════════════════════════════════════
@@ -136,10 +157,16 @@ const PetAssistant = (() => {
                     <div class="pet-cfg-row">
                         <label>Tēls</label>
                         <div class="pet-picker" id="pet-picker">
-                            ${Object.entries(PETS).map(([k, v]) => `
-                                <button type="button" class="pet-pick ${settings.type === k ? 'active' : ''}"
-                                        data-type="${k}">${v.emoji}</button>
-                            `).join('')}
+                            ${Object.entries(PETS).map(([k, v]) => {
+                                const avail = userLevel >= v.levelRequired;
+                                return `<button type="button"
+                                    class="pet-pick ${settings.type === k && avail ? 'active' : ''} ${!avail ? 'pet-pick-locked' : ''}"
+                                    data-type="${k}" ${!avail ? 'disabled' : ''}
+                                    title="${avail ? '' : `Līmenis ${v.levelRequired} vajadzīgs`}">
+                                    ${avail ? v.emoji : '🔒'}
+                                    ${!avail ? `<span class="pet-pick-lvl-req">${v.levelRequired}</span>` : ''}
+                                </button>`;
+                            }).join('')}
                         </div>
                     </div>
                 </div>
@@ -292,7 +319,7 @@ const PetAssistant = (() => {
 
         document.addEventListener('click', (e) => {
             const btn = e.target.closest?.('[data-type]');
-            if (!btn) return;
+            if (!btn || btn.disabled || btn.classList.contains('pet-pick-locked')) return;
             settings.type = btn.dataset.type;
             document.querySelectorAll('.pet-pick').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
@@ -474,7 +501,7 @@ const PetAssistant = (() => {
         return d.innerHTML;
     }
 
-    return { init };
+    return { init, tryInit };
 })();
 
 document.addEventListener('DOMContentLoaded', () => PetAssistant.init());

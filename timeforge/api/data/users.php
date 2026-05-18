@@ -36,8 +36,34 @@ if ($method === 'GET') {
 
 } elseif ($method === 'PUT') {
     $d = $body;
-    $pdo->prepare('UPDATE users SET first_name=?,last_name=?,language=?,timezone=? WHERE id=?')
-        ->execute([$d['firstName']??'',$d['lastName']??'',$d['language']??'lv',$d['timezone']??'Europe/Riga',$uid]);
+
+    // XP / level update (triggered by achievements)
+    if (isset($d['xp']) || isset($d['level'])) {
+        $pdo->prepare('UPDATE users SET xp=?, level_num=? WHERE id=?')
+            ->execute([(int)($d['xp'] ?? 0), (int)($d['level'] ?? 1), $uid]);
+    }
+
+    // Streak update
+    if (isset($d['streak'])) {
+        $pdo->prepare('UPDATE users SET streak=? WHERE id=?')
+            ->execute([(int)$d['streak'], $uid]);
+    }
+
+    // Profile update (name, language, timezone) — only when those fields are present
+    if (isset($d['firstName']) || isset($d['lastName']) || isset($d['language']) || isset($d['timezone'])) {
+        $cur = $pdo->prepare('SELECT first_name, last_name, language, timezone FROM users WHERE id=?');
+        $cur->execute([$uid]);
+        $c = $cur->fetch();
+        $pdo->prepare('UPDATE users SET first_name=?, last_name=?, language=?, timezone=? WHERE id=?')
+            ->execute([
+                $d['firstName'] ?? $c['first_name'],
+                $d['lastName']  ?? $c['last_name'],
+                $d['language']  ?? $c['language'],
+                $d['timezone']  ?? $c['timezone'],
+                $uid,
+            ]);
+    }
+
     ok($d);
 
 } elseif ($method === 'PATCH') {

@@ -1,10 +1,10 @@
 /* ============================================
-   TimeForge — Focus Timer (Pomodoro)
-   Circular progress, settings, task link, sessions
+   TimeForge — Fokusa taimeris (Pomodoro)
+   Apļveida progress, iestatījumi, uzdevuma saistīšana, sesijas
    ============================================ */
 
 const Timer = (() => {
-    const CIRC = 2 * Math.PI * 130; // circumference for r=130 SVG circle
+    const CIRC = 2 * Math.PI * 130; // SVG apļa perimetrs priekš r=130
     let state = {
         running: false,
         paused: false,
@@ -25,7 +25,7 @@ const Timer = (() => {
         soundEnabled: true,
     };
 
-    /** Render timer page */
+    /** Attēlot taimeŗa lapu ar SVG apli, vadīklām un iestatījumiem */
     function renderPage() {
         const user = Store.getCurrentUser();
         if (!user) return;
@@ -199,7 +199,7 @@ const Timer = (() => {
             state.linkedTaskId = e.target.value || null;
         });
 
-        // Settings changes (only when not running)
+        // Iestatījumu maiņa (tikai apstādināta taimeŗa stāvoklī)
         ['ts-work','ts-short','ts-long','ts-sessions'].forEach(id => {
             document.getElementById(id)?.addEventListener('change', e => {
                 if (state.running) return;
@@ -274,7 +274,7 @@ const Timer = (() => {
             updateDisplay();
             updateRing();
 
-            // Urgency effect last 5 seconds
+            // Steidzamības efekts pēdējās 5 sekundēs
             const wrapper = document.getElementById('timer-circle-wrapper');
             if (wrapper) {
                 wrapper.classList.toggle('urgent', state.secondsLeft <= 5 && state.secondsLeft > 0);
@@ -318,7 +318,7 @@ const Timer = (() => {
                 });
             }
 
-            // Determine next phase
+            // Noteikt nākamo fāzi: garš vai īss pārtraukums
             if (state.completedSessions >= settings.sessionsBeforeLong) {
                 state.phase = 'longBreak';
                 state.totalSeconds = settings.longBreak * 60;
@@ -328,7 +328,7 @@ const Timer = (() => {
                 state.totalSeconds = settings.shortBreak * 60;
             }
         } else {
-            // Break ended, start work
+            // Pārtraukums beidzies — sākt jaunu darba fāzi
             state.phase = 'work';
             state.totalSeconds = settings.workDuration * 60;
             state.startedAt = new Date().toISOString();
@@ -338,14 +338,14 @@ const Timer = (() => {
         Toast.info('⏱️', state.phase === 'work' ? I18n.t('timer.work') :
                          state.phase === 'shortBreak' ? I18n.t('timer.shortBreak') : I18n.t('timer.longBreak'));
         renderPage();
-        tick(); // Auto-continue
+        tick(); // Automātiski turpināt nākamo fāzi
     }
 
     function saveSession(completed) {
         const user = Store.getCurrentUser();
         if (!user) return;
         const elapsed = state.totalSeconds - state.secondsLeft;
-        if (elapsed < 5) return; // Don't save trivial sessions
+        if (elapsed < 5) return; // Nesaglabāt pārāk īsas sesijas
         Store.createFocusSession({
             userId: user.id,
             taskId: state.linkedTaskId,
@@ -355,6 +355,10 @@ const Timer = (() => {
             type: state.phase,
             completed
         });
+        if (completed && state.phase === 'work') {
+            const mins = Math.round(elapsed / 60);
+            Store.logActivity(user.id, 'focus_completed', `${mins} min`);
+        }
     }
 
     function playSound() {
